@@ -1,13 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import './App.css';
 import { API, Storage } from 'aws-amplify';
 import { withAuthenticator, AmplifySignOut } from '@aws-amplify/ui-react';
 import { listNotes } from './graphql/queries';
 import { createNote as createNoteMutation, deleteNote as deleteNoteMutation } from './graphql/mutations';
+import {
+  Layout,
+  Page,
+  FooterHelp,
+  Card,
+  Link,
+  Button,
+  FormLayout,
+  TextField,
+  AccountConnection,
+  ChoiceList,
+  SettingToggle,
+} from '@shopify/polaris';
+import {ImportMinor} from '@shopify/polaris-icons';
 
 const initialFormState = { name: '', description: '' }
 
 function App() {
+  const [first, setFirst] = useState('');
+  const [last, setLast] = useState('');
+  const [email, setEmail] = useState('');
+  const [checkboxes, setCheckboxes] = useState([]);
+  const [connected, setConnected] = useState(false);
+
+  const handleFirstChange = useCallback((value) => setFirst(value), []);
+  const handleLastChange = useCallback((value) => setLast(value), []);
+  const handleEmailChange = useCallback((value) => setEmail(value), []);
+  const handleCheckboxesChange = useCallback(
+    (value) => setCheckboxes(value),
+    [],
+  );
+
+  const toggleConnection = useCallback(() => {
+    setConnected(!connected);
+  }, [connected]);
+
+  const breadcrumbs = [{content: 'Sample apps'}, {content: 'Create React App'}];
+  const primaryAction = {content: 'New product'};
+  const secondaryActions = [{content: 'Import', icon: ImportMinor}];
+
+  const choiceListItems = [
+    {label: 'I accept the Terms of Service', value: 'false'},
+    {label: 'I consent to receiving emails', value: 'false2'},
+  ];
+
+  const accountSectionDescription = connected
+    ? 'Disconnect your account from your Shopify store.'
+    : 'Connect your account to your Shopify store.';
+
+  const accountMarkup = connected ? (
+    <DisconnectAccount onAction={toggleConnection} />
+  ) : (
+    <ConnectAccount onAction={toggleConnection} />
+  );
+
   const [notes, setNotes] = useState([]);
   const [formData, setFormData] = useState(initialFormState);
 
@@ -54,36 +105,109 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <h1>My Notes App</h1>
-      <input
-        onChange={e => setFormData({ ...formData, 'name': e.target.value})}
-        placeholder="Note name"
-        value={formData.name}
-      />
-      <input
-        onChange={e => setFormData({ ...formData, 'description': e.target.value})}
-        placeholder="Note description"
-        value={formData.description}
-      />
-      <button onClick={createNote}>Create Note</button>
-      <div style={{marginBottom: 30}}>
-          {
-            notes.map(note => (
-              <div key={note.id || note.name}>
-                <h2>{note.name}</h2>
-                <p>{note.description}</p>
-                <button onClick={() => deleteNote(note)}>Delete note</button>
-                {
-                  note.image && <img src={note.image} style={{width: 400}} />
-                }
-              </div>
-            ))
-          }
-      </div>
-      <input type="file" onChange={onChange}/>
-      <AmplifySignOut />
-    </div>
+    <Page
+      title="Polaris"
+      breadcrumbs={breadcrumbs}
+      primaryAction={primaryAction}
+      secondaryActions={secondaryActions}
+    >
+      <Layout>
+        <Layout.AnnotatedSection
+          title="Style"
+          description="Customize the style of your checkout"
+        >
+          <SettingToggle
+            action={{
+              content: 'Customize Checkout',
+            }}
+          >
+            Upload your store’s logo, change colors and fonts, and more.
+          </SettingToggle>
+        </Layout.AnnotatedSection>
+
+        <Layout.AnnotatedSection
+          title="Account"
+          description={accountSectionDescription}
+        >
+          {accountMarkup}
+        </Layout.AnnotatedSection>
+
+        <Layout.AnnotatedSection
+          title="Form"
+          description="A sample form using Polaris components."
+        >
+          <Card sectioned>
+            <FormLayout>
+              <FormLayout.Group>
+                <TextField
+                  value={first}
+                  label="First name"
+                  placeholder="Tom"
+                  onChange={handleFirstChange}
+                />
+                <TextField
+                  value={last}
+                  label="Last name"
+                  placeholder="Ford"
+                  onChange={handleLastChange}
+                />
+              </FormLayout.Group>
+
+              <TextField
+                value={email}
+                label="Email"
+                placeholder="example@email.com"
+                onChange={handleEmailChange}
+              />
+
+              <ChoiceList
+                allowMultiple
+                choices={choiceListItems}
+                selected={checkboxes}
+                onChange={handleCheckboxesChange}
+              />
+
+              <Button primary>Submit</Button>
+            </FormLayout>
+          </Card>
+        </Layout.AnnotatedSection>
+
+        <Layout.Section>
+          <FooterHelp>
+            For more details on Polaris, visit our{' '}
+            <Link url="https://polaris.shopify.com">style guide</Link>.
+          </FooterHelp>
+        </Layout.Section>
+      </Layout>
+    </Page>
+  );
+}
+
+function ConnectAccount({onAction}) {
+  return (
+    <AccountConnection
+      action={{content: 'Connect', onAction}}
+      details="No account connected"
+      termsOfService={
+        <p>
+          By clicking Connect, you are accepting Sample’s{' '}
+          <Link url="https://polaris.shopify.com">Terms and Conditions</Link>,
+          including a commission rate of 15% on sales.
+        </p>
+      }
+    />
+  );
+}
+
+function DisconnectAccount({onAction}) {
+  return (
+    <AccountConnection
+      connected
+      action={{content: 'Disconnect', onAction}}
+      accountName="Tom Ford"
+      title={<Link url="http://google.com">Tom Ford</Link>}
+      details="Account id: d587647ae4"
+    />
   );
 }
 
